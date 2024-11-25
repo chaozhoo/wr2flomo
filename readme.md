@@ -7,7 +7,7 @@
 5. 支持一键清空所有空行
 
 ### 开箱即用
-[下载 `WR2Flomo.exe` ↵ ](https://github.com/chaozhnn/wr2flomo/releases/download/v0.4.8.1/WR2Flomo.exe)双击打开即可开始导入，首次打开点击 `新建笔记` ，选择数据文件的保存位置（记得放在容易找到的地方）
+[下载 `WR2Flomo.exe` ↵ ](https://github.com/chaozhoo/wr2flomo/releases/download/v0.4.8.1/WR2Flomo.exe)双击打开即可开始导入，首次打开点击 `新建笔记` ，选择数据文件的保存位置（记得放在容易找到的地方）
 > 此操作创建的笔记数据文件，方便一次没完成可以 `下次接着进行` ，适合读书笔记数量特别多的朋友。
 
 -----------------
