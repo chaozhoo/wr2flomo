@@ -1,0 +1,51 @@
+# 虚拟环境
+venv/
+env/
+.env/
+
+# Python 缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 打包生成的文件
+dist/
+build/
+*.spec
+
+# IDE 配置文件
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# 日志文件
+*.log
+logs/
+
+# 本地配置文件
+config.local.ini
+*.local.yml
+
+# 测试覆盖率报告
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
+
+# 数据库文件
+*.db
+*.sqlite3
+
+# 环境变量文件
+.env
+.env.local
+
+# pip 安装日志
+pip-log.txt
+pip-delete-this-directory.txt

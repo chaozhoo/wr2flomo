@@ -1,0 +1,71 @@
+/* Neumorphism 风格 (柔和、立体、简约): */
+/* 全局变量 */
+* {
+    --base: #e0e5ec;
+    --shadow-dark: #a3b1c6;
+    --shadow-light: #ffffff;
+    --text: #4a4a4a;
+    --accent: #6b7b8e;
+}
+
+/* 全局样式 */
+* {
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    border: none;
+}
+
+QMainWindow {
+    background-color: var(--base);
+}
+
+/* 按钮 - 凸起效果 */
+QPushButton {
+    background-color: var(--base);
+    border-radius: 10px;
+    padding: 12px 24px;
+    margin: 4px;
+    color: var(--text);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 var(--base), stop:1 var(--base));
+    box-shadow: 8px 8px 16px var(--shadow-dark),
+                -8px -8px 16px var(--shadow-light);
+}
+
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 var(--shadow-dark), stop:1 var(--base));
+    box-shadow: inset 4px 4px 8px var(--shadow-dark),
+                inset -4px -4px 8px var(--shadow-light);
+}
+
+/* 输入框 - 凹陷效果 */
+QLineEdit, QTextEdit {
+    background-color: var(--base);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: inset 4px 4px 8px var(--shadow-dark),
+                inset -4px -4px 8px var(--shadow-light);
+}
+
+/* 列表控件 */
+QListWidget {
+    background-color: var(--base);
+    border-radius: 15px;
+    padding: 10px;
+    box-shadow: 8px 8px 16px var(--shadow-dark),
+                -8px -8px 16px var(--shadow-light);
+}
+
+QListWidget::item {
+    background-color: var(--base);
+    border-radius: 8px;
+    margin: 4px;
+    padding: 8px;
+}
+
+QListWidget::item:selected {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 var(--shadow-dark), stop:1 var(--base));
+    color: var(--accent);
+} 

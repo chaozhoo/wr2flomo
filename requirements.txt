@@ -1,0 +1,4 @@
+PyQt6>=6.4.0
+cryptography>=3.4.7
+keyring>=23.0.1
+requests>=2.26.0

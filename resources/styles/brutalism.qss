@@ -1,0 +1,66 @@
+/* 全局样式 */
+* {
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    background-color: #ffffff;
+    color: #000000;
+    border: 3px solid #000000;
+}
+
+QMainWindow {
+    background-color: #ffffff;
+}
+
+/* 粗犷按钮 */
+QPushButton {
+    background-color: #ffffff;
+    border: 3px solid #000000;
+    padding: 10px 20px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #000000;
+    color: #ffffff;
+    border: 3px solid #ff0000;
+}
+
+QPushButton:pressed {
+    background-color: #ff0000;
+    color: #000000;
+    border: 3px dashed #000000;
+}
+
+/* 输入框 */
+QLineEdit {
+    background-color: #ffff00;
+    border: 3px solid #000000;
+    padding: 10px;
+    font-family: "Courier New", monospace;
+}
+
+QLineEdit:focus {
+    background-color: #ffffff;
+    border: 3px dashed #ff0000;
+}
+
+/* 列表 */
+QListWidget {
+    background-color: #ffffff;
+    border: 3px solid #000000;
+    padding: 5px;
+}
+
+QListWidget::item {
+    background-color: #ffffff;
+    padding: 10px;
+    margin: 2px;
+    border: 2px solid #000000;
+}
+
+QListWidget::item:selected {
+    background-color: #000000;
+    color: #ffffff;
+    border: 2px solid #ff0000;
+} 
