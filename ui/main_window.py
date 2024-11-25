@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, 
                              QPushButton, QLabel, QLineEdit, QTextEdit, 
                              QTreeWidget, QTreeWidgetItem, QSplitter, QFileDialog, QMessageBox,
-                             QCheckBox, QProgressDialog, QApplication, QInputDialog, QAbstractItemView, QListWidget, QListWidgetItem, QTabWidget)
+                             QCheckBox, QProgressDialog, QApplication, QInputDialog, QAbstractItemView, QListWidget, QListWidgetItem, QTabWidget, QMenu)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QShortcut, QKeySequence, QFontMetrics
 import os
@@ -10,6 +10,7 @@ from ui.note_splitter import NoteSplitterDialog
 from ui.note_editor import NoteEditorWidget
 from ui.note_editor_manager import NoteEditorManager
 from utils.flomo_api import FlomoAPI
+import re
 
 class ImportWorker(QThread):
     progress = pyqtSignal(int)
@@ -71,17 +72,22 @@ class MainWindow(QMainWindow):
         self.update_note_list()
 
     def create_new_database(self):
-        db_path, _ = QFileDialog.getSaveFileName(self, "选择数据库保存位置", "", "SQLite 数据库 (*.db)")
+        file_dialog = QFileDialog()
+        db_path, _ = file_dialog.getSaveFileName(
+            self,
+            "新建数据库文件",
+            "",
+            "SQLite 数据库 (*.db)"
+        )
+        
         if db_path:
             try:
                 self.db_manager.initialize_database(db_path)
-                self.db_name_label.setText(os.path.basename(db_path))
-                QMessageBox.information(self, "成功", f"数据库已创建并保存在：{db_path}")
-                self.update_note_list()
+                self.config.set('db_path', db_path)
+                self.update_db_name_display()
+                self.enable_features()
             except Exception as e:
-                QMessageBox.warning(self, "错误", f"创建数据库时出错：{str(e)}")
-        else:
-            QMessageBox.warning(self, "警告", "未选择数据库路径，应用将无法正常工作")
+                QMessageBox.warning(self, "错误", f"创建数据库失败：{str(e)}")
 
     def init_ui(self):
         print("Setting up UI...")
@@ -192,9 +198,9 @@ class MainWindow(QMainWindow):
         new_db_btn = QPushButton("新建笔记库")
         new_db_btn.clicked.connect(self.create_new_database)
         button_layout.addWidget(new_db_btn)
-        clear_db_btn = QPushButton("清空笔记库")
-        clear_db_btn.clicked.connect(self.clear_database)
-        button_layout.addWidget(clear_db_btn)
+        copy_db_btn = QPushButton("创建库副本")
+        copy_db_btn.clicked.connect(self.create_database_copy)
+        button_layout.addWidget(copy_db_btn)
         layout.addLayout(button_layout)
 
         # 笔记管理面板
@@ -206,16 +212,17 @@ class MainWindow(QMainWindow):
         self._note_tabs = QTabWidget()
         self._unimported_list = QListWidget()
         self._imported_list = QListWidget()
+        self._skipped_list = QListWidget()
         
-        self._unimported_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self._imported_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        
-        self._unimported_list.itemSelectionChanged.connect(self.update_note_stats)
-        self._imported_list.itemSelectionChanged.connect(self.update_note_stats)
+        # 设置选择模式
+        for list_widget in [self._unimported_list, self._imported_list, self._skipped_list]:
+            list_widget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+            list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            list_widget.customContextMenuRequested.connect(self.show_context_menu)
         
         self._note_tabs.addTab(self._unimported_list, "未导入")
         self._note_tabs.addTab(self._imported_list, "已导入")
-        self._note_tabs.currentChanged.connect(self.on_tab_changed)
+        self._note_tabs.addTab(self._skipped_list, "已跳过")
         
         # 初始化时为第一个标签页设置信号连接
         self._unimported_list.itemSelectionChanged.connect(self.on_selection_changed)
@@ -258,8 +265,92 @@ class MainWindow(QMainWindow):
 
         self.update_checkbox_state()  # 初始化复选框状态
 
+        # Add separator
+        layout.addWidget(QLabel("批量操作"))
+        
+        # Find and Replace section
+        find_replace_layout = QHBoxLayout()
+        self.find_input = QLineEdit()
+        self.find_input.setPlaceholderText("查找内容")
+        self.replace_input = QLineEdit()
+        self.replace_input.setPlaceholderText("替换为")
+        self.use_regex = QCheckBox("使用正则表达式")
+        
+        find_replace_layout.addWidget(self.find_input)
+        find_replace_layout.addWidget(self.replace_input)
+        layout.addLayout(find_replace_layout)
+        layout.addWidget(self.use_regex)
+        
+        replace_btn = QPushButton("查找替换")
+        replace_btn.clicked.connect(self.perform_find_replace)
+        layout.addWidget(replace_btn)
+        
+        # Remove empty lines button
+        remove_empty_btn = QPushButton("删除所有空行")
+        remove_empty_btn.clicked.connect(self.remove_empty_lines)
+        layout.addWidget(remove_empty_btn)
+
+        # 添加撤销重做按钮
+        undo_redo_layout = QHBoxLayout()
+        
+        self.undo_btn = QPushButton("撤销")
+        self.undo_btn.setShortcut("Ctrl+Z")
+        self.undo_btn.clicked.connect(self.undo_operation)
+        self.undo_btn.setEnabled(False)
+        
+        self.redo_btn = QPushButton("重做")
+        self.redo_btn.setShortcut("Ctrl+Y")
+        self.redo_btn.clicked.connect(self.redo_operation)
+        self.redo_btn.setEnabled(False)
+        
+        undo_redo_layout.addWidget(self.undo_btn)
+        undo_redo_layout.addWidget(self.redo_btn)
+        layout.addLayout(undo_redo_layout)
+
         right_widget.setLayout(layout)
         return right_widget
+
+    def perform_find_replace(self):
+        find_text = self.find_input.text()
+        replace_text = self.replace_input.text()
+        use_regex = self.use_regex.isChecked()
+        
+        if not find_text:
+            QMessageBox.warning(self, "警告", "请输入要查找的内容")
+            return
+            
+        reply = QMessageBox.question(self, '确认', 
+                                   f'确定要进行全局替换吗？\n查找：{find_text}\n替换为：{replace_text}',
+                                   QMessageBox.StandardButton.Yes | 
+                                   QMessageBox.StandardButton.No)
+                                   
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                modified_count = self.db_manager.find_and_replace(
+                    find_text, replace_text, use_regex)
+                self.update_note_list()
+                self.update_undo_redo_buttons()  # 更新按钮状态
+                QMessageBox.information(self, "完成", 
+                                      f"已修改 {modified_count} 条笔记")
+            except re.error:
+                QMessageBox.warning(self, "错误", "正则表达式格式错误")
+            except Exception as e:
+                QMessageBox.warning(self, "错误", f"操作失败：{str(e)}")
+
+    def remove_empty_lines(self):
+        reply = QMessageBox.question(self, '确认', 
+                                   '确定要删除所有笔记中的空行吗？',
+                                   QMessageBox.StandardButton.Yes | 
+                                   QMessageBox.StandardButton.No)
+                                   
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                modified_count = self.db_manager.remove_empty_lines()
+                self.update_note_list()
+                QMessageBox.information(self, "完成", 
+                                      f"已修改 {modified_count} 条笔记")
+            except Exception as e:
+                QMessageBox.warning(self, "错误", f"操作失败：{str(e)}")
 
     def open_note_splitter(self):
         dialog = NoteSplitterDialog(self)
@@ -313,15 +404,26 @@ class MainWindow(QMainWindow):
     def update_note_list(self):
         self._unimported_list.clear()
         self._imported_list.clear()
+        self._skipped_list.clear()
+        
         notes = self.db_manager.get_notes_summary()
         for note in notes:
             content = self.truncate_content(note['content'], 100)
             item = QListWidgetItem(content)
             item.setData(Qt.ItemDataRole.UserRole, note['id'])
-            if note['imported']:
+            
+            if note['skipped']:
+                self._skipped_list.addItem(item)
+            elif note['imported']:
                 self._imported_list.addItem(item)
             else:
                 self._unimported_list.addItem(item)
+        
+        # 更新标签页显示
+        self._note_tabs.setTabText(0, f"未导入 ({self._unimported_list.count()})")
+        self._note_tabs.setTabText(1, f"已导入 ({self._imported_list.count()})")
+        self._note_tabs.setTabText(2, f"已跳过 ({self._skipped_list.count()})")
+        
         self.update_note_stats()
 
     def truncate_content(self, content, max_length):
@@ -356,22 +458,55 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "错误", "笔记库名称必须以 .db 结尾")
 
     def load_database(self):
-        db_path, _ = QFileDialog.getOpenFileName(self, "加载笔记库", "", "SQLite 数据库 (*.db)")
+        """加载数据库"""
+        file_dialog = QFileDialog()
+        db_path, _ = file_dialog.getOpenFileName(
+            self,
+            "选择数据库文件",
+            "",
+            "SQLite 数据库 (*.db)"
+        )
+        
         if db_path:
             try:
-                self.db_manager.initialize_database(db_path)
-                self.db_name_label.setText(os.path.basename(db_path))
-                self.update_note_list()
-                QMessageBox.information(self, "成功", f"数据库已加载：{db_path}")
+                self.db_manager.db_path = db_path
+                self.db_manager.ensure_tables_exist()
+                self.config.set('db_path', db_path)
+                self.update_db_name_display()
+                self.enable_features()
             except Exception as e:
-                QMessageBox.warning(self, "错误", f"加载数据库时出错：{str(e)}")
+                QMessageBox.warning(self, "错误", f"加载数据库失败：{str(e)}")
 
-    def clear_database(self):
-        reply = QMessageBox.question(self, '确认', '确定要清空笔记库吗此操作不可撤销。',
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if reply == QMessageBox.StandardButton.Yes:
-            self.db_manager.clear_database()
+    def create_database_copy(self):
+        """创建当前数据库的副本并切换到新数据库"""
+        try:
+            # 保存当前数据库路径作为备份
+            old_path = self.db_manager.db_path
+            old_name = os.path.basename(old_path)
+            
+            # 创建副本并获取新路径
+            new_path = self.db_manager.create_database_copy()
+            new_name = os.path.basename(new_path)
+            
+            # 更新配置
+            self.config.set('db_path', new_path)
+            
+            # 更新UI显示
+            self.update_db_name_display()
             self.update_note_list()
+            
+            # 显示成功消息
+            QMessageBox.information(
+                self, 
+                "成功", 
+                f"已创建并切换到新数据库：\n{new_name}\n\n原数据库：\n{old_name}"
+            )
+            
+            # 启用相关功能
+            self.enable_features()
+            
+        except Exception as e:
+            QMessageBox.warning(self, "错误", str(e))
 
     def import_selected_notes(self):
         current_tab = self._note_tabs.currentWidget()
@@ -508,6 +643,106 @@ class MainWindow(QMainWindow):
         self.note_stats_label.setEnabled(True)
         self._note_tabs.setEnabled(True)
         # 启用其他可能依赖数据库的UI元素
+
+    def update_undo_redo_buttons(self):
+        """更新撤销重做按钮状态"""
+        self.undo_btn.setEnabled(bool(self.db_manager.history))
+        self.redo_btn.setEnabled(bool(self.db_manager.future))
+
+    def undo_operation(self):
+        """执行撤销操作"""
+        if self.db_manager.undo():
+            self.update_note_list()
+            self.update_undo_redo_buttons()
+            QMessageBox.information(self, "完成", "已撤销上一次操作")
+        else:
+            QMessageBox.warning(self, "提示", "没有可撤销的操作")
+
+    def redo_operation(self):
+        """执行重做操作"""
+        if self.db_manager.redo():
+            self.update_note_list()
+            self.update_undo_redo_buttons()
+            QMessageBox.information(self, "完成", "已重做操作")
+        else:
+            QMessageBox.warning(self, "提示", "没有可重做的操作")
+
+    def update_db_name_display(self):
+        """更新数据库名称显示"""
+        db_path = self.config.get('db_path', '')
+        if db_path:
+            db_name = os.path.basename(db_path)
+            self.db_name_label.setText(db_name)
+            # 添加工具提示显示完整路径
+            self.db_name_label.setToolTip(db_path)
+        else:
+            self.db_name_label.setText("未选择数据库")
+            self.db_name_label.setToolTip("")
+
+    def show_context_menu(self, position):
+        """显示右键菜单"""
+        menu = QMenu()
+        current_list = self.sender()
+        selected_items = current_list.selectedItems()
+        
+        if not selected_items:
+            return
+            
+        # 根据当前标签页添加不同的菜单项
+        current_tab_index = self._note_tabs.currentIndex()
+        if current_tab_index == 0:  # 未导入标签页
+            skip_action = menu.addAction("跳过选中笔记")
+            skip_action.triggered.connect(lambda: self.skip_selected_notes(selected_items))
+        elif current_tab_index == 2:  # 已跳过标签页
+            restore_action = menu.addAction("恢复笔记")
+            restore_action.triggered.connect(lambda: self.restore_skipped_notes(selected_items))
+        
+        # 显示菜单
+        menu.exec(current_list.mapToGlobal(position))
+
+    def skip_selected_notes(self, selected_items):
+        """将选中的笔记标记为已跳过"""
+        reply = QMessageBox.question(
+            self, 
+            '确认', 
+            f'确定要跳过选中的 {len(selected_items)} 条笔记吗？',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            for item in selected_items:
+                note_id = item.data(Qt.ItemDataRole.UserRole)
+                self.db_manager.mark_note_as_skipped(note_id)
+            self.update_note_list()
+
+    def restore_skipped_notes(self, selected_items):
+        """将选中的已跳过笔记恢复到未导入状态"""
+        if not selected_items:
+            return
+        
+        reply = QMessageBox.question(
+            self, 
+            '确认', 
+            f'确定要恢复选中的 {len(selected_items)} 条笔记吗？',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            restored_count = 0
+            for item in selected_items:
+                note_id = item.data(Qt.ItemDataRole.UserRole)
+                if self.db_manager.restore_skipped_note(note_id):
+                    restored_count += 1
+            
+            if restored_count > 0:
+                self.update_note_list()
+                QMessageBox.information(
+                    self, 
+                    "完成", 
+                    f"已恢复 {restored_count} 条笔记到未导入列表"
+                )
+            else:
+                QMessageBox.warning(self, "提示", "没有笔记被恢复")
 
 
 
