@@ -16,25 +16,24 @@ class NoteImporter:
     def __init__(self):
         self.app = QApplication(sys.argv)
         
-        # 加载样式表并保存
+        # 加载样式表
         self.STYLE_SHEET = self.load_stylesheet()
         if self.STYLE_SHEET:
-            self.app.setStyleSheet(self.STYLE_SHEET)
             print("样式表已加载")
         else:
             print("未能加载样式表")
-            
+            # 使用默认样式
+            self.STYLE_SHEET = """
+                * {
+                    font-family: Arial, "Microsoft YaHei", SimSun, sans-serif;
+                }
+            """
+        
+        # 设置样式表
+        self.app.setStyleSheet(self.STYLE_SHEET)
+        
         self.config = Config()
         self.db_manager = DatabaseManager(self.config)
-        
-        # 修改默认字体大小为16px
-        self.STYLE_SHEET = """
-            * {
-                font-family: Arial, "Microsoft YaHei", SimSun, sans-serif;
-                font-size: 16px;
-            }
-        """
-        self.app.setStyleSheet(self.STYLE_SHEET)
         
         # 显示数据库选择对话框
         if not self.show_database_selector():
@@ -66,16 +65,22 @@ class NoteImporter:
         sys.exit(self.app.exec())
 
     def load_stylesheet(self):
-        style_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
-                                'resources', 'styles', 'minimalist.qss')
-        print(f"尝试加载样式表: {style_path}")
-        if os.path.exists(style_path):
-            with open(style_path, 'r', encoding='utf-8') as f:
-                style_content = f.read()
-                print("样式表内容长度:", len(style_content))
-                return style_content
-        else:
-            print("样式表文件不存在")
+        try:
+            if getattr(sys, 'frozen', False):
+                base_path = sys._MEIPASS
+            else:
+                base_path = os.path.dirname(os.path.dirname(__file__))
+            
+            style_path = os.path.join(base_path, 'resources', 'styles', 'minimalist.qss')
+            print(f"尝试加载样式表: {style_path}")
+            
+            if os.path.exists(style_path):
+                with open(style_path, 'r', encoding='utf-8') as f:
+                    style_content = f.read()
+                    print("样式表内容预览:")
+                    return style_content
+        except Exception as e:
+            print(f"加载样式表时出错: {str(e)}")
         return ""
 
 if __name__ == "__main__":

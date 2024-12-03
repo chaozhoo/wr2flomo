@@ -1,7 +1,6 @@
 /* 全局样式 */
-* {
+QWidget {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 14px;
     color: #333333;
 }
 
@@ -16,15 +15,22 @@ QPushButton {
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     padding: 8px 16px;
+    margin: 1px;
     min-width: 80px;
 }
 
 QPushButton:hover {
-    background-color: #f5f5f5;
+    background-color: #22c38b;
+    border: 2px solid #00b176;
+    color: #ffffff;
+    margin: 0px;
 }
 
 QPushButton:pressed {
-    background-color: #e0e0e0;
+    background-color: #00b176;
+    border: 2px solid #006d49;
+    margin: 0px;
+    color: #ffffff;
 }
 
 /* 输入框 */
@@ -36,7 +42,7 @@ QLineEdit, QTextEdit, QPlainTextEdit {
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
-    border: 2px solid #333333;
+    border: 2px solid #00b176;
     padding: 7px;
 }
 
@@ -52,40 +58,55 @@ QListWidget::item, QTreeWidget::item {
 }
 
 QListWidget::item:selected, QTreeWidget::item:selected {
-    background-color: #f5f5f5;
-    color: #333333;
+    background-color: #00b176;
+    color: #ffffff;
+}
+
+QListWidget::item:hover, QTreeWidget::item:hover {
+    background-color: #99ccbb;
 }
 
 /* 标签页 */
 QTabWidget::pane {
-    border: 1px solid var(--border);
+    border: 1px solid #e0e0e0;
     border-radius: 4px;
 }
 
 QTabBar::tab {
-    background-color: var(--surface);
-    border: 1px solid var(--border);
+    background-color: #ffffff;
+    border: none;
     padding: 8px 16px;
 }
 
 QTabBar::tab:selected {
-    background-color: var(--background);
-    border-bottom: 2px solid var(--primary);
+    color: #00b176;
+    border-bottom: 2px solid #00b176;
 }
 
 /* 滚动条 */
 QScrollBar:vertical {
     border: none;
-    width: 8px;
-    margin: 0px;
+    background: #fafafa;
+    width: 12px;
+    margin: 2px;
 }
 
 QScrollBar::handle:vertical {
-    background: var(--border);
-    border-radius: 4px;
+    background: #e0e0e0;
+    border-radius: 6px;
     min-height: 20px;
 }
 
 QScrollBar::handle:vertical:hover {
-    background: var(--text-secondary);
+    background: #f2f2f2;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: none;
 }

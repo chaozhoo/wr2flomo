@@ -39,10 +39,16 @@ class ImportWorker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self, db_manager, config, style_sheet=None):
         super().__init__()
-        self.setStyleSheet(style_sheet)
-        print("Initializing MainWindow...")
         self.db_manager = db_manager
         self.config = config
+        
+        # 基础样式表
+        self.base_style_sheet = style_sheet if style_sheet else ""
+        
+        # 应用样式表
+        self.update_style_sheet()
+        
+        print("Initializing MainWindow...")
         self._left_panel = None
         self._right_panel = None
         self._note_tree = None
@@ -751,7 +757,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "提示", "没有笔记被恢复")
 
     def show_display_settings(self):
-        current_font_size = self.config.get('font_size', 16)
+        current_font_size = self.config.get('font_size', 14)
         dialog = DisplaySettingsDialog(self, current_font_size)
         if dialog.exec():
             new_font_size = dialog.get_font_size()
@@ -759,12 +765,49 @@ class MainWindow(QMainWindow):
             self.apply_font_size(new_font_size)
 
     def apply_font_size(self, size):
-        style = f"""
+        """应用新的字体大小"""
+        self.config.set('font_size', size)
+        self.update_style_sheet()
+
+    def set_theme(self, is_dark=False):
+        if is_dark:
+            theme_vars = """
+                * {
+                    --primary: #64B5F6;
+                    --background: #121212;
+                    --surface: #1E1E1E;
+                    --border: #333333;
+                    --text-primary: #FFFFFF;
+                    --text-secondary: #B0B0B0;
+                }
+            """
+        else:
+            theme_vars = """
+                * {
+                    --primary: #2196F3;
+                    --background: #FFFFFF;
+                    --surface: #FAFAFA;
+                    --border: #E0E0E0;
+                    --text-primary: #333333;
+                    --text-secondary: #666666;
+                }
+            """
+        
+        # 将主题变量添加到现有样式表之前
+        current_style = self.styleSheet()
+        self.setStyleSheet(theme_vars + current_style)
+
+    def update_style_sheet(self):
+        """更新样式表，包含基础样式和字体大小设置"""
+        current_font_size = self.config.get('font_size', 14)
+        font_style = f"""
             * {{
-                font-size: {size}px;
+                font-size: {current_font_size}px;
             }}
         """
-        self.setStyleSheet(self.styleSheet() + style)
+        # 合并基础样式和字体样式
+        complete_style = self.base_style_sheet + font_style
+        self.setStyleSheet(complete_style)
 
 
 
