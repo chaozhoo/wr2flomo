@@ -1,16 +1,20 @@
 import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMessageBox
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 获取项目根目录的绝对路径
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-sys.path.insert(0, project_root)
+# 获取应用程序的基础路径
+if getattr(sys, 'frozen', False):
+    # 如果是打包后的可执行文件
+    BASE_DIR = sys._MEIPASS
+else:
+    # 如果是开发环境
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-from ui.main_window import MainWindow
-from database.db_manager import DatabaseManager
-from utils.config import Config
+sys.path.insert(0, BASE_DIR)
+
+from src.ui.main_window import MainWindow
+from src.database.db_manager import DatabaseManager
+from src.utils.config import Config
 
 class NoteImporter:
     def __init__(self):
