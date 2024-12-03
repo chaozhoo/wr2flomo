@@ -11,6 +11,7 @@ from src.ui.note_editor import NoteEditorWidget
 from src.ui.note_editor_manager import NoteEditorManager
 from src.utils.flomo_api import FlomoAPI
 import re
+from src.ui.display_settings_dialog import DisplaySettingsDialog
 
 class ImportWorker(QThread):
     progress = pyqtSignal(int)
@@ -203,6 +204,10 @@ class MainWindow(QMainWindow):
         copy_db_btn.clicked.connect(self.create_database_copy)
         button_layout.addWidget(copy_db_btn)
         layout.addLayout(button_layout)
+
+        display_settings_btn = QPushButton("显示设置")
+        display_settings_btn.clicked.connect(self.show_display_settings)
+        button_layout.addWidget(display_settings_btn)
 
         # 笔记管理面板
         layout.addWidget(QLabel("笔记管理面板"))
@@ -744,6 +749,22 @@ class MainWindow(QMainWindow):
                 )
             else:
                 QMessageBox.warning(self, "提示", "没有笔记被恢复")
+
+    def show_display_settings(self):
+        current_font_size = self.config.get('font_size', 16)
+        dialog = DisplaySettingsDialog(self, current_font_size)
+        if dialog.exec():
+            new_font_size = dialog.get_font_size()
+            self.config.set('font_size', new_font_size)
+            self.apply_font_size(new_font_size)
+
+    def apply_font_size(self, size):
+        style = f"""
+            * {{
+                font-size: {size}px;
+            }}
+        """
+        self.setStyleSheet(self.styleSheet() + style)
 
 
 

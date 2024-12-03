@@ -27,6 +27,15 @@ class NoteImporter:
         self.config = Config()
         self.db_manager = DatabaseManager(self.config)
         
+        # 修改默认字体大小为16px
+        self.STYLE_SHEET = """
+            * {
+                font-family: Arial, "Microsoft YaHei", SimSun, sans-serif;
+                font-size: 16px;
+            }
+        """
+        self.app.setStyleSheet(self.STYLE_SHEET)
+        
         # 显示数据库选择对话框
         if not self.show_database_selector():
             sys.exit(0)
@@ -35,7 +44,7 @@ class NoteImporter:
         self.db_initialized = True
 
     def show_database_selector(self):
-        from ui.database_selector import DatabaseSelectorDialog
+        from src.ui.database_selector import DatabaseSelectorDialog
         dialog = DatabaseSelectorDialog()
         if dialog.exec():
             db_path = dialog.selected_path

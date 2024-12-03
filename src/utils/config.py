@@ -9,6 +9,9 @@ class Config:
         self.key = self.get_or_create_key()
         self.fernet = Fernet(self.key)
         self.config = self.load_config()
+        self.config = {
+            'font_size': 14,  # 添加默认字体大小
+        }
 
     def get_or_create_key(self):
         key = keyring.get_password("wr2flomo", "encryption_key")
